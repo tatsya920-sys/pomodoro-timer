@@ -27,10 +27,8 @@ const elements = {
     resetBtn: document.getElementById('resetBtn'),
     phaseText: document.getElementById('phaseText'),
     setCounter: document.getElementById('setCounter'),
-    progressCircle: document.getElementById('progressCircle'),
     liquidWave: document.querySelector('.liquid-wave'),
-    youtubeUrl: document.getElementById('youtubeUrl'),
-    setVideoBtn: document.getElementById('setVideoBtn'),
+    liquidWaveOverlay: document.querySelector('.liquid-wave-overlay'),
     youtubePlayer: document.getElementById('youtubePlayer')
 };
 
@@ -43,10 +41,18 @@ function init() {
     timerState.remainingSeconds = TIMES.work;
     timerState.totalSeconds = TIMES.work;
     
+    // 液体を最初から表示
+    elements.liquidWave.classList.add('active');
+    if (elements.liquidWaveOverlay) {
+        elements.liquidWaveOverlay.classList.add('active');
+    }
+    
     updateDisplay();
     updateLiquid();
-    updateProgress();
     setupEventListeners();
+    
+    // 波のアニメーションループを開始
+    requestAnimationFrame(updateLiquid);
 }
 
 // イベントリスナー設定
@@ -54,12 +60,6 @@ function setupEventListeners() {
     elements.startBtn.addEventListener('click', startTimer);
     elements.pauseBtn.addEventListener('click', pauseTimer);
     elements.resetBtn.addEventListener('click', resetTimer);
-    elements.setVideoBtn.addEventListener('click', setYoutubeVideo);
-    
-    // EnterキーでYouTube設定
-    elements.youtubeUrl.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') setYoutubeVideo();
-    });
 }
 
 // タイマー開始
@@ -70,6 +70,9 @@ function startTimer() {
     elements.startBtn.disabled = true;
     elements.pauseBtn.disabled = false;
     
+    // YouTube動画を自動再生
+    playMusic();
+    
     timerState.intervalId = setInterval(() => {
         timerState.remainingSeconds--;
         
@@ -79,7 +82,6 @@ function startTimer() {
         } else {
             updateDisplay();
             updateLiquid();
-            updateProgress();
         }
     }, 1000);
 }
@@ -91,6 +93,9 @@ function pauseTimer() {
     
     elements.startBtn.disabled = false;
     elements.pauseBtn.disabled = true;
+    
+    // YouTubeを一時停止
+    pauseMusic();
 }
 
 // タイマーリセット
@@ -106,9 +111,11 @@ function resetTimer() {
     elements.startBtn.disabled = false;
     elements.pauseBtn.disabled = true;
     
+    // YouTubeを停止
+    stopMusic();
+    
     updateDisplay();
     updateLiquid();
-    updateProgress();
 }
 
 // フェーズ完了
@@ -160,13 +167,13 @@ function updateDisplay() {
     // フェーズテキスト
     if (timerState.currentPhase === 'work') {
         elements.phaseText.textContent = '作業中';
-        elements.phaseText.style.backgroundColor = 'rgba(255, 107, 107, 0.5)';
+        elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     } else if (timerState.currentPhase === 'shortBreak') {
         elements.phaseText.textContent = '短い休憩中';
-        elements.phaseText.style.backgroundColor = 'rgba(107, 255, 107, 0.5)';
+        elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     } else if (timerState.currentPhase === 'longBreak') {
         elements.phaseText.textContent = '長い休憩中';
-        elements.phaseText.style.backgroundColor = 'rgba(107, 150, 255, 0.5)';
+        elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     }
     
     // セットカウンター
@@ -181,12 +188,39 @@ function updateDisplay() {
 function updateLiquid() {
     const progress = timerState.remainingSeconds / timerState.totalSeconds;
     const liquidHeight = progress * 100;
+    const waveOffset = 1080 - (liquidHeight / 100) * 1080;
     
-    // 波形のパスを計算
-    const waveHeight = liquidHeight;
-    const path = `M 0,${100 - waveHeight} Q 480,${90 - waveHeight} 960,${100 - waveHeight} T 1920,${100 - waveHeight} L 1920,100 L 0,100 Z`;
+    // 時間ベースの波のアニメーション
+    const now = Date.now();
+    const wavePhase1 = (now % 3500) / 3500; // 3.5秒周期
+    const wavePhase2 = (now % 5000) / 5000; // 5秒周期
     
-    elements.liquidWave.setAttribute('d', path);
+    // サイン波を使ってスムーズな波動を生成
+    const waveAmp1 = Math.sin(wavePhase1 * Math.PI * 2) * 20; // ±20の振幅
+    const waveAmp2 = Math.sin(wavePhase2 * Math.PI * 2) * 15; // ±15の振幅
+    
+    // メインの波形 - より自然な曲線
+    const wave1 = `M 0,${waveOffset + waveAmp1} 
+                   Q 240,${waveOffset + waveAmp1 - 40} 480,${waveOffset + waveAmp1 - 20}
+                   T 960,${waveOffset + waveAmp1 - 30}
+                   T 1440,${waveOffset + waveAmp1 - 10}
+                   T 1920,${waveOffset + waveAmp1}
+                   L 1920,1080 L 0,1080 Z`;
+    
+    // サブの波形 - 異なる周期で波打つ
+    const wave2 = `M 0,${waveOffset + 20 + waveAmp2}
+                   Q 320,${waveOffset + waveAmp2 - 15} 640,${waveOffset + 20 + waveAmp2}
+                   T 1280,${waveOffset + 20 + waveAmp2}
+                   T 1920,${waveOffset + 20 + waveAmp2}
+                   L 1920,1080 L 0,1080 Z`;
+    
+    elements.liquidWave.setAttribute('d', wave1);
+    if (elements.liquidWaveOverlay) {
+        elements.liquidWaveOverlay.setAttribute('d', wave2);
+    }
+    
+    // 次フレームでアニメーション続行
+    requestAnimationFrame(updateLiquid);
 }
 
 // プログレスサークル更新
@@ -199,42 +233,39 @@ function updateProgress() {
     elements.progressCircle.style.strokeDashoffset = offset;
 }
 
-// YouTube動画設定
-function setYoutubeVideo() {
-    const url = elements.youtubeUrl.value.trim();
-    if (!url) return;
-    
-    // YouTubeの動画IDを抽出
-    let videoId = null;
-    
-    // 長いURL形式: https://www.youtube.com/watch?v=xxxxx
-    const longUrlMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-    if (longUrlMatch) {
-        videoId = longUrlMatch[1];
+// 音楽の自動再生
+const MUSIC_VIDEO_ID = 'vr9dLvJs7VE';
+let musicIframe = null;
+
+function playMusic() {
+    // 既存のiframeを削除（毎回新規作成）
+    if (musicIframe) {
+        musicIframe.remove();
     }
     
-    // 短いURL形式: https://youtu.be/xxxxx
-    if (!videoId) {
-        const shortUrlMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-        if (shortUrlMatch) {
-            videoId = shortUrlMatch[1];
-        }
-    }
+    // YouTube埋め込みプレーヤーを新規作成
+    musicIframe = document.createElement('iframe');
+    musicIframe.src = `https://www.youtube.com/embed/${MUSIC_VIDEO_ID}?autoplay=1`;
+    musicIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    musicIframe.style.display = 'none';
+    musicIframe.width = '0';
+    musicIframe.height = '0';
     
-    if (videoId) {
-        const iframe = document.createElement('iframe');
-        iframe.src = `https://www.youtube.com/embed/${videoId}`;
-        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-        iframe.allowFullscreen = true;
-        
-        elements.youtubePlayer.innerHTML = '';
-        elements.youtubePlayer.appendChild(iframe);
-        elements.youtubePlayer.classList.add('active');
-        
-        // 自動再生（ユーザー操作後なので有効）
-        iframe.style.display = 'block';
-    } else {
-        alert('有効なYouTube動画URLを入力してください');
+    elements.youtubePlayer.innerHTML = '';
+    elements.youtubePlayer.appendChild(musicIframe);
+}
+
+function pauseMusic() {
+    if (musicIframe) {
+        musicIframe.remove();
+        musicIframe = null;
+    }
+}
+
+function stopMusic() {
+    if (musicIframe) {
+        musicIframe.remove();
+        musicIframe = null;
     }
 }
 
@@ -243,5 +274,44 @@ function notifyCompletion() {
     alert('ポモドーロサイクルが完了しました！お疲れ様でした🎉');
 }
 
+// 設定パネル機能
+function setupSettingsPanel() {
+    const settingsToggle = document.getElementById('settingsToggle');
+    const settingsContent = document.getElementById('settingsContent');
+    const fontSizeSlider = document.getElementById('fontSizeSlider');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    const fontFamilySelect = document.getElementById('fontFamilySelect');
+    const fontWeightSelect = document.getElementById('fontWeightSelect');
+    const colorPicker = document.getElementById('colorPicker');
+    
+    // 設定パネルのトグル
+    settingsToggle.addEventListener('click', () => {
+        settingsContent.style.display = settingsContent.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    // フォントサイズ変更
+    fontSizeSlider.addEventListener('input', (e) => {
+        const size = e.target.value;
+        fontSizeValue.textContent = size + 'px';
+        document.documentElement.style.setProperty('--timer-font-size', size + 'px');
+    });
+    
+    // フォントファミリー変更
+    fontFamilySelect.addEventListener('change', (e) => {
+        document.documentElement.style.setProperty('--timer-font-family', e.target.value);
+    });
+    
+    // フォント太さ変更
+    fontWeightSelect.addEventListener('change', (e) => {
+        document.documentElement.style.setProperty('--timer-font-weight', e.target.value);
+    });
+    
+    // 色変更
+    colorPicker.addEventListener('change', (e) => {
+        document.documentElement.style.setProperty('--timer-color', e.target.value);
+    });
+}
+
 // 初期化実行
 init();
+setupSettingsPanel();

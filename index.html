@@ -12,25 +12,27 @@
         <svg class="liquid-background" viewBox="0 0 1920 1080" preserveAspectRatio="none">
             <defs>
                 <linearGradient id="liquidGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#ee5a6f;stop-opacity:1" />
+                    <stop offset="0%" style="stop-color:#6b9aff;stop-opacity:0.85" />
+                    <stop offset="30%" style="stop-color:#5a8fff;stop-opacity:0.90" />
+                    <stop offset="70%" style="stop-color:#4169ff;stop-opacity:0.95" />
+                    <stop offset="100%" style="stop-color:#2d5fff;stop-opacity:1" />
                 </linearGradient>
-                <filter id="wave">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="noise" seed="2" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="80" xChannelSelector="R" yChannelSelector="G" />
+                <filter id="liquidFilter">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
                 </filter>
             </defs>
-            <path class="liquid-wave" d="" fill="url(#liquidGradient)" filter="url(#wave)"></path>
+            <path class="liquid-wave" d="" fill="url(#liquidGradient)" filter="url(#liquidFilter)"></path>
+            <path class="liquid-wave-overlay" d="" fill="url(#liquidGradient)" filter="url(#liquidFilter)"></path>
         </svg>
 
         <!-- コンテンツ -->
         <div class="content">
             <!-- ヘッダー -->
             <div class="header">
-                <h1>ポモドーロタイマー</h1>
+                <h1>pomodoro timer</h1>
                 <div class="phase-indicator">
-                    <span id="phaseText" class="phase-text">作業中</span>
-                    <span id="setCounter" class="set-counter">セット 1/4</span>
+                    <span id="phaseText" class="phase-text">work</span>
+                    <span id="setCounter" class="set-counter">set 1/4</span>
                 </div>
             </div>
 
@@ -39,30 +41,59 @@
                 <div class="time-text">
                     <span id="minutes">25</span>:<span id="seconds">00</span>
                 </div>
-                <div class="progress-ring">
-                    <svg width="200" height="200">
-                        <circle cx="100" cy="100" r="90" class="progress-bg"></circle>
-                        <circle cx="100" cy="100" r="90" class="progress-circle" id="progressCircle"></circle>
-                    </svg>
-                </div>
             </div>
 
             <!-- コントロール -->
             <div class="controls">
-                <button id="startBtn" class="btn btn-primary">開始</button>
-                <button id="pauseBtn" class="btn btn-secondary" disabled>一時停止</button>
-                <button id="resetBtn" class="btn btn-secondary">リセット</button>
+                <button id="startBtn" class="btn btn-primary">start</button>
+                <button id="pauseBtn" class="btn btn-secondary" disabled>stop</button>
+                <button id="resetBtn" class="btn btn-secondary">reset</button>
             </div>
 
-            <!-- YouTube セクション -->
-            <div class="youtube-section">
-                <h2>音楽を再生</h2>
-                <div class="youtube-input">
-                    <input type="text" id="youtubeUrl" placeholder="YouTubeの動画URLを貼り付け (例: https://www.youtube.com/watch?v=...)" />
-                    <button id="setVideoBtn" class="btn btn-small">設定</button>
+            <!-- 設定パネル -->
+            <div class="settings-panel">
+                <button id="settingsToggle" class="settings-toggle">⚙️</button>
+                <div id="settingsContent" class="settings-content" style="display: none;">
+                    <h3>タイマー表示設定</h3>
+                    
+                    <div class="setting-group">
+                        <label>フォントサイズ:</label>
+                        <input type="range" id="fontSizeSlider" min="60" max="180" value="120" />
+                        <span id="fontSizeValue">120px</span>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>フォント:</label>
+                        <select id="fontFamilySelect">
+                            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+                            <option value="'Arial', sans-serif">Arial</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                            <option value="'Courier New', monospace">Courier New</option>
+                            <option value="'Georgia', serif">Georgia</option>
+                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>フォント太さ:</label>
+                        <select id="fontWeightSelect">
+                            <option value="300">Light (300)</option>
+                            <option value="400">Normal (400)</option>
+                            <option value="600">Semi-bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>色:</label>
+                        <input type="color" id="colorPicker" value="#ffffff" />
+                    </div>
                 </div>
-                <div id="youtubePlayer" class="youtube-player"></div>
             </div>
+
+            <!-- YouTube非表示プレイヤー -->
+            <div id="youtubePlayer" class="youtube-player" style="display: none;"></div>
         </div>
     </div>
 
