@@ -33,6 +33,7 @@
                 <div class="phase-indicator">
                     <span id="phaseText" class="phase-text">work</span>
                     <span id="setCounter" class="set-counter">set 1/4</span>
+                    <span id="cycleCounter" class="cycle-counter">cycle 0</span>
                 </div>
             </div>
 
@@ -54,40 +55,30 @@
             <div class="settings-panel">
                 <button id="settingsToggle" class="settings-toggle">⚙️</button>
                 <div id="settingsContent" class="settings-content" style="display: none;">
-                    <h3>タイマー表示設定</h3>
+                    <h3>タイマー設定</h3>
                     
                     <div class="setting-group">
-                        <label>フォントサイズ:</label>
-                        <input type="range" id="fontSizeSlider" min="60" max="180" value="120" />
-                        <span id="fontSizeValue">120px</span>
+                        <label>セット数:</label>
+                        <input type="number" id="setCountInput" min="1" max="20" value="4" />
+                        <span id="setCountValue">4 セット</span>
                     </div>
                     
                     <div class="setting-group">
-                        <label>フォント:</label>
-                        <select id="fontFamilySelect">
-                            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
-                            <option value="'Arial', sans-serif">Arial</option>
-                            <option value="'Times New Roman', serif">Times New Roman</option>
-                            <option value="'Courier New', monospace">Courier New</option>
-                            <option value="'Georgia', serif">Georgia</option>
-                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
-                        </select>
+                        <label>作業時間 (分):</label>
+                        <input type="number" id="workTimeInput" min="1" max="60" value="25" />
+                        <span id="workTimeValue">25分</span>
                     </div>
                     
                     <div class="setting-group">
-                        <label>フォント太さ:</label>
-                        <select id="fontWeightSelect">
-                            <option value="300">Light (300)</option>
-                            <option value="400">Normal (400)</option>
-                            <option value="600">Semi-bold (600)</option>
-                            <option value="700">Bold (700)</option>
-                        </select>
+                        <label>短い休憩 (分):</label>
+                        <input type="number" id="shortBreakInput" min="1" max="30" value="5" />
+                        <span id="shortBreakValue">5分</span>
                     </div>
                     
                     <div class="setting-group">
-                        <label>色:</label>
-                        <input type="color" id="colorPicker" value="#ffffff" />
+                        <label>長い休憩 (分):</label>
+                        <input type="number" id="longBreakInput" min="1" max="60" value="30" />
+                        <span id="longBreakValue">30分</span>
                     </div>
                 </div>
             </div>

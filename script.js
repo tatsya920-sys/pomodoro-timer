@@ -5,7 +5,9 @@ const timerState = {
     remainingSeconds: 0,
     currentPhase: 'work', // 'work', 'shortBreak', 'longBreak'
     currentSet: 1,
-    totalPhases: 0, // 0-11: (work+break) × 4, then 12: long break
+    maxSets: 4,             // 長い休憩までのセット数（デフォルト: 4）
+    cycleCount: 0,          // 完了したサイクル数
+    totalPhases: 0,         // 全フェーズを通じての進捗
     intervalId: null,
     audioContext: null,
     player: null
@@ -27,9 +29,18 @@ const elements = {
     resetBtn: document.getElementById('resetBtn'),
     phaseText: document.getElementById('phaseText'),
     setCounter: document.getElementById('setCounter'),
+    cycleCounter: document.getElementById('cycleCounter'),
     liquidWave: document.querySelector('.liquid-wave'),
     liquidWaveOverlay: document.querySelector('.liquid-wave-overlay'),
-    youtubePlayer: document.getElementById('youtubePlayer')
+    youtubePlayer: document.getElementById('youtubePlayer'),
+    setCountInput: document.getElementById('setCountInput'),
+    setCountValue: document.getElementById('setCountValue'),
+    workTimeInput: document.getElementById('workTimeInput'),
+    workTimeValue: document.getElementById('workTimeValue'),
+    shortBreakInput: document.getElementById('shortBreakInput'),
+    shortBreakValue: document.getElementById('shortBreakValue'),
+    longBreakInput: document.getElementById('longBreakInput'),
+    longBreakValue: document.getElementById('longBreakValue')
 };
 
 // 初期化
@@ -60,6 +71,83 @@ function setupEventListeners() {
     elements.startBtn.addEventListener('click', startTimer);
     elements.pauseBtn.addEventListener('click', pauseTimer);
     elements.resetBtn.addEventListener('click', resetTimer);
+    
+    // セット数変更リスナー
+    if (elements.setCountInput) {
+        elements.setCountInput.addEventListener('change', (e) => {
+            const newSetCount = parseInt(e.target.value);
+            if (newSetCount > 0) {
+                timerState.maxSets = newSetCount;
+                if (elements.setCountValue) {
+                    elements.setCountValue.textContent = `${newSetCount} セット`;
+                }
+                // タイマーが実行中でなければセット数の表示を更新
+                if (!timerState.isRunning) {
+                    updateDisplay();
+                }
+            }
+        });
+    }
+    
+    // 作業時間変更リスナー
+    if (elements.workTimeInput) {
+        elements.workTimeInput.addEventListener('change', (e) => {
+            const newWorkTime = parseInt(e.target.value);
+            if (newWorkTime > 0) {
+                TIMES.work = newWorkTime * 60;
+                if (elements.workTimeValue) {
+                    elements.workTimeValue.textContent = `${newWorkTime}分`;
+                }
+                // タイマーが実行中でなく、かつ現在のフェーズが仕事フェーズなら表示を更新
+                if (!timerState.isRunning && timerState.currentPhase === 'work') {
+                    timerState.totalSeconds = TIMES.work;
+                    timerState.remainingSeconds = TIMES.work;
+                    updateDisplay();
+                    updateLiquid();
+                }
+            }
+        });
+    }
+    
+    // 短い休憩時間変更リスナー
+    if (elements.shortBreakInput) {
+        elements.shortBreakInput.addEventListener('change', (e) => {
+            const newShortBreak = parseInt(e.target.value);
+            if (newShortBreak > 0) {
+                TIMES.shortBreak = newShortBreak * 60;
+                if (elements.shortBreakValue) {
+                    elements.shortBreakValue.textContent = `${newShortBreak}分`;
+                }
+                // タイマーが実行中でなく、かつ現在のフェーズが短い休憩なら表示を更新
+                if (!timerState.isRunning && timerState.currentPhase === 'shortBreak') {
+                    timerState.totalSeconds = TIMES.shortBreak;
+                    timerState.remainingSeconds = TIMES.shortBreak;
+                    updateDisplay();
+                    updateLiquid();
+                }
+            }
+        });
+    }
+    
+    // 長い休憩時間変更リスナー
+    if (elements.longBreakInput) {
+        elements.longBreakInput.addEventListener('change', (e) => {
+            const newLongBreak = parseInt(e.target.value);
+            if (newLongBreak > 0) {
+                TIMES.longBreak = newLongBreak * 60;
+                if (elements.longBreakValue) {
+                    elements.longBreakValue.textContent = `${newLongBreak}分`;
+                }
+                // タイマーが実行中でなく、かつ現在のフェーズが長い休憩なら表示を更新
+                if (!timerState.isRunning && timerState.currentPhase === 'longBreak') {
+                    timerState.totalSeconds = TIMES.longBreak;
+                    timerState.remainingSeconds = TIMES.longBreak;
+                    updateDisplay();
+                    updateLiquid();
+                }
+            }
+        });
+    }
 }
 
 // タイマー開始
@@ -104,6 +192,7 @@ function resetTimer() {
     timerState.isRunning = false;
     timerState.currentPhase = 'work';
     timerState.currentSet = 1;
+    timerState.cycleCount = 0;
     timerState.totalPhases = 0;
     timerState.remainingSeconds = TIMES.work;
     timerState.totalSeconds = TIMES.work;
@@ -128,8 +217,8 @@ function completePhase() {
         timerState.totalSeconds = TIMES.shortBreak;
     } else if (timerState.currentPhase === 'shortBreak') {
         // 短い休憩完了
-        if (timerState.currentSet === 4) {
-            // 4セット完了 → 長い休憩へ
+        if (timerState.currentSet === timerState.maxSets) {
+            // 指定セット数完了 → 長い休憩へ
             timerState.currentPhase = 'longBreak';
             timerState.remainingSeconds = TIMES.longBreak;
             timerState.totalSeconds = TIMES.longBreak;
@@ -141,10 +230,15 @@ function completePhase() {
             timerState.totalSeconds = TIMES.work;
         }
     } else if (timerState.currentPhase === 'longBreak') {
-        // サイクル完了
+        // サイクル完了 → 次のサイクルへ自動遷移
+        timerState.cycleCount++;
         notifyCompletion();
-        resetTimer();
-        return;
+        
+        // セット数をリセットして、次のサイクルの作業フェーズを開始
+        timerState.currentSet = 1;
+        timerState.currentPhase = 'work';
+        timerState.remainingSeconds = TIMES.work;
+        timerState.totalSeconds = TIMES.work;
     }
     
     updateDisplay();
@@ -166,21 +260,26 @@ function updateDisplay() {
     
     // フェーズテキスト
     if (timerState.currentPhase === 'work') {
-        elements.phaseText.textContent = '作業中';
+        elements.phaseText.textContent = 'work';
         elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     } else if (timerState.currentPhase === 'shortBreak') {
-        elements.phaseText.textContent = '短い休憩中';
+        elements.phaseText.textContent = 'short break';
         elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     } else if (timerState.currentPhase === 'longBreak') {
-        elements.phaseText.textContent = '長い休憩中';
+        elements.phaseText.textContent = 'long break';
         elements.phaseText.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
     }
     
     // セットカウンター
     if (timerState.currentPhase === 'longBreak') {
-        elements.setCounter.textContent = 'サイクル完了！';
+        elements.setCounter.textContent = `set - / ${timerState.maxSets}`;
     } else {
-        elements.setCounter.textContent = `セット ${timerState.currentSet}/4`;
+        elements.setCounter.textContent = `set ${timerState.currentSet}/${timerState.maxSets}`;
+    }
+    
+    // サイクルカウンター
+    if (elements.cycleCounter) {
+        elements.cycleCounter.textContent = `cycle ${timerState.cycleCount}`;
     }
 }
 
@@ -278,37 +377,10 @@ function notifyCompletion() {
 function setupSettingsPanel() {
     const settingsToggle = document.getElementById('settingsToggle');
     const settingsContent = document.getElementById('settingsContent');
-    const fontSizeSlider = document.getElementById('fontSizeSlider');
-    const fontSizeValue = document.getElementById('fontSizeValue');
-    const fontFamilySelect = document.getElementById('fontFamilySelect');
-    const fontWeightSelect = document.getElementById('fontWeightSelect');
-    const colorPicker = document.getElementById('colorPicker');
     
     // 設定パネルのトグル
     settingsToggle.addEventListener('click', () => {
         settingsContent.style.display = settingsContent.style.display === 'none' ? 'block' : 'none';
-    });
-    
-    // フォントサイズ変更
-    fontSizeSlider.addEventListener('input', (e) => {
-        const size = e.target.value;
-        fontSizeValue.textContent = size + 'px';
-        document.documentElement.style.setProperty('--timer-font-size', size + 'px');
-    });
-    
-    // フォントファミリー変更
-    fontFamilySelect.addEventListener('change', (e) => {
-        document.documentElement.style.setProperty('--timer-font-family', e.target.value);
-    });
-    
-    // フォント太さ変更
-    fontWeightSelect.addEventListener('change', (e) => {
-        document.documentElement.style.setProperty('--timer-font-weight', e.target.value);
-    });
-    
-    // 色変更
-    colorPicker.addEventListener('change', (e) => {
-        document.documentElement.style.setProperty('--timer-color', e.target.value);
     });
 }
 

@@ -5,11 +5,11 @@
 }
 
 :root {
-    /* タイマー表示のカスタマイズ */
-    --timer-font-size: 120px;
+    /* タイマー表示の固定設定 */
+    --timer-font-size: 180px;
     --timer-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --timer-color: #ffffff;
-    --timer-font-weight: 300;
+    --timer-font-weight: 700;
 }
 
 html, body {
@@ -154,6 +154,13 @@ body {
     backdrop-filter: blur(10px);
 }
 
+.cycle-counter {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
 /* タイマー表示 */
 .timer-display {
     display: flex;
@@ -237,9 +244,8 @@ body {
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.3);
-    color: white;
-    backdrop-filter: blur(10px);
+    background: white;
+    color: #2d5fff;
 }
 
 .btn-secondary:hover:not(:disabled) {
