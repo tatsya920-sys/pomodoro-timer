@@ -209,6 +209,10 @@ function resetTimer() {
 
 // フェーズ完了
 function completePhase() {
+    // インターバルをクリア
+    clearInterval(timerState.intervalId);
+    timerState.isRunning = false;
+    
     // 次のフェーズへ
     if (timerState.currentPhase === 'work') {
         // 作業完了 → 短い休憩へ
@@ -243,11 +247,13 @@ function completePhase() {
     
     updateDisplay();
     updateLiquid();
-    updateProgress();
     
-    // 自動再生
-    timerState.remainingSeconds = timerState.totalSeconds;
-    startTimer();
+    // フェーズ完了音を再生
+    playPhaseCompleteSound();
+    
+    // ボタンの状態をリセット（STARTボタンを有効化、STOPボタンを無効化）
+    elements.startBtn.disabled = false;
+    elements.pauseBtn.disabled = true;
 }
 
 // 表示更新
@@ -324,6 +330,11 @@ function updateLiquid() {
 
 // プログレスサークル更新
 function updateProgress() {
+    // プログレスサークル要素が存在しない場合は処理をスキップ
+    if (!elements.progressCircle) {
+        return;
+    }
+    
     const progress = 1 - (timerState.remainingSeconds / timerState.totalSeconds);
     const circumference = 2 * Math.PI * 90;
     const offset = circumference * progress;
@@ -371,6 +382,48 @@ function stopMusic() {
 // 完了通知
 function notifyCompletion() {
     alert('ポモドーロサイクルが完了しました！お疲れ様でした🎉');
+}
+
+// フェーズ完了音
+function playPhaseCompleteSound() {
+    try {
+        // AudioContextの初期化
+        if (!timerState.audioContext) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            timerState.audioContext = new AudioContext();
+        }
+        
+        const ctx = timerState.audioContext;
+        const now = ctx.currentTime;
+        
+        // 3つのビープ音を連続して鳴らす
+        const frequencies = [800, 1000, 1200]; // Hz
+        const duration = 0.15; // 秒
+        const gap = 0.1; // 音と音の間隔
+        
+        frequencies.forEach((frequency, index) => {
+            const startTime = now + (duration + gap) * index;
+            
+            // オシレーターの作成
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.frequency.value = frequency;
+            osc.type = 'sine';
+            
+            // ゲイン（音量）のエンベロープ
+            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        });
+    } catch (error) {
+        console.log('音声再生エラー:', error);
+    }
 }
 
 // 設定パネル機能
