@@ -162,7 +162,7 @@ function startTimer() {
     playMusic();
     
     timerState.intervalId = setInterval(() => {
-        timerState.remainingSeconds--;
+        timerState.remainingSeconds -= 0.1;
         
         if (timerState.remainingSeconds < 0) {
             clearInterval(timerState.intervalId);
@@ -171,7 +171,7 @@ function startTimer() {
             updateDisplay();
             updateLiquid();
         }
-    }, 1000);
+    }, 100);
 }
 
 // タイマー一時停止
@@ -215,24 +215,24 @@ function completePhase() {
     
     // 次のフェーズへ
     if (timerState.currentPhase === 'work') {
-        // 作業完了 → 短い休憩へ
-        timerState.currentPhase = 'shortBreak';
-        timerState.remainingSeconds = TIMES.shortBreak;
-        timerState.totalSeconds = TIMES.shortBreak;
-    } else if (timerState.currentPhase === 'shortBreak') {
-        // 短い休憩完了
+        // 作業完了
         if (timerState.currentSet === timerState.maxSets) {
             // 指定セット数完了 → 長い休憩へ
             timerState.currentPhase = 'longBreak';
             timerState.remainingSeconds = TIMES.longBreak;
             timerState.totalSeconds = TIMES.longBreak;
         } else {
-            // 次のセットの作業へ
-            timerState.currentSet++;
-            timerState.currentPhase = 'work';
-            timerState.remainingSeconds = TIMES.work;
-            timerState.totalSeconds = TIMES.work;
+            // 短い休憩へ
+            timerState.currentPhase = 'shortBreak';
+            timerState.remainingSeconds = TIMES.shortBreak;
+            timerState.totalSeconds = TIMES.shortBreak;
         }
+    } else if (timerState.currentPhase === 'shortBreak') {
+        // 短い休憩完了 → 次のセットの作業へ
+        timerState.currentSet++;
+        timerState.currentPhase = 'work';
+        timerState.remainingSeconds = TIMES.work;
+        timerState.totalSeconds = TIMES.work;
     } else if (timerState.currentPhase === 'longBreak') {
         // サイクル完了 → 次のサイクルへ自動遷移
         timerState.cycleCount++;
@@ -259,7 +259,7 @@ function completePhase() {
 // 表示更新
 function updateDisplay() {
     const minutes = Math.floor(timerState.remainingSeconds / 60);
-    const seconds = timerState.remainingSeconds % 60;
+    const seconds = Math.floor(timerState.remainingSeconds % 60);
     
     elements.minutes.textContent = String(minutes).padStart(2, '0');
     elements.seconds.textContent = String(seconds).padStart(2, '0');
